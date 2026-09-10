@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { ChatMessageItem, OptionChip } from '../../chatbot/types';
-import { Send, Bot, User, ChevronRight, Sparkles } from 'lucide-react';
+import { Send, Bot, User, ChevronRight } from 'lucide-react';
 
 interface ChatMessageProps {
   message: ChatMessageItem;
@@ -13,6 +13,39 @@ interface ChatMessageProps {
 export function ChatMessage({ message, onSelectOption, onSubmitInput, isLatest }: ChatMessageProps) {
   const isAnn = message.sender === 'ann';
   const [inputValue, setInputValue] = useState('');
+  
+  // Typewriter effect state for ANN messages
+  const [displayedText, setDisplayedText] = useState(isAnn && isLatest ? '' : (message.text || ''));
+  const [isTypingDone, setIsTypingDone] = useState(!isAnn || !isLatest);
+  const animationRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isAnn && isLatest && message.text) {
+      setDisplayedText('');
+      setIsTypingDone(false);
+
+      let currentLength = 0;
+      const fullText = message.text;
+      const totalChars = fullText.length;
+
+      // Calculate smooth typing speed (10ms - 20ms per char)
+      const stepInterval = Math.max(12, Math.min(24, Math.floor(600 / Math.max(1, totalChars))));
+
+      const timer = setInterval(() => {
+        currentLength++;
+        setDisplayedText(fullText.slice(0, currentLength));
+        if (currentLength >= totalChars) {
+          clearInterval(timer);
+          setIsTypingDone(true);
+        }
+      }, stepInterval);
+
+      return () => clearInterval(timer);
+    } else {
+      setDisplayedText(message.text || '');
+      setIsTypingDone(true);
+    }
+  }, [message.text, isAnn, isLatest]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,19 +70,22 @@ export function ChatMessage({ message, onSelectOption, onSubmitInput, isLatest }
       <div className={`max-w-[88%] sm:max-w-[82%] ${isAnn ? 'items-start' : 'items-end'} flex flex-col`}>
         {/* Message Bubble */}
         <div
-          className={`px-4 py-3 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-line shadow-sm ${
+          className={`px-4 py-3 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-line shadow-sm relative ${
             isAnn
               ? 'bg-slate-50 text-slate-800 border border-slate-200/90 rounded-tl-xs font-normal'
               : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-xs shadow-cyan-600/20 font-medium'
           }`}
         >
-          {message.text}
+          {displayedText}
+          {isAnn && !isTypingDone && (
+            <span className="inline-block w-1.5 h-4 bg-cyan-600 ml-1 animate-pulse align-middle" />
+          )}
         </div>
 
         <span className="text-[10px] text-slate-400 mt-1 px-1 font-mono">{message.timestamp}</span>
 
-        {/* Form Input inside Message */}
-        {isAnn && message.requiresInput && isLatest && (
+        {/* Form Input inside Message - only shows after typing finishes */}
+        {isAnn && message.requiresInput && isLatest && isTypingDone && (
           <form onSubmit={handleFormSubmit} className="mt-3 w-full flex items-center gap-2">
             <input
               type={message.inputType === 'customerNumber' ? 'number' : 'text'}
@@ -70,8 +106,8 @@ export function ChatMessage({ message, onSelectOption, onSubmitInput, isLatest }
           </form>
         )}
 
-        {/* Option Chips List */}
-        {isAnn && message.options && message.options.length > 0 && isLatest && (
+        {/* Option Chips List - only shows after typewriter typing finishes */}
+        {isAnn && message.options && message.options.length > 0 && isLatest && isTypingDone && (
           <div className="flex flex-col gap-2 mt-3 w-full">
             {message.options.map((opt) => {
               const isPrimary = opt.variant === 'primary';
@@ -80,6 +116,8 @@ export function ChatMessage({ message, onSelectOption, onSubmitInput, isLatest }
                 <motion.button
                   key={opt.id}
                   title={opt.label}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
                   whileHover={{ scale: 1.01, x: 2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onSelectOption(opt)}
@@ -108,4 +146,3 @@ export function ChatMessage({ message, onSelectOption, onSubmitInput, isLatest }
     </motion.div>
   );
 }
-

@@ -7,7 +7,7 @@ export const FLOW_CONFIG: Record<FlowNodeId, FlowStepConfig> = {
   // ═════════════════════════════════════════════════════════════════════════
   main_menu: {
     id: 'main_menu',
-    message: "Welcome to Torrent Power ANN Digital Assistant. Please select a service category below (as per Annexure-3 Functional Menu):",
+    message: "Welcome to Torrent Power ANN Digital Assistant. It's a pleasure to assist you! How may I help you today?",
     options: [
       { id: 'm1', label: '1. Register No Power Complaint', nextFlowId: 'no_power_start', variant: 'primary' },
       { id: 'm2', label: '2. Application Related', nextFlowId: 'app_related_start' },

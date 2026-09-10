@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FlowNodeId, ChatMessageItem, OptionChip } from './types';
 import { FLOW_CONFIG } from './flowConfig';
+import { queryANNAssistant } from '../services/llmService';
 
 export interface ChatEngineState {
   currentFlowId: FlowNodeId;
@@ -23,7 +24,7 @@ export function useChatbotEngine() {
           id: 'msg-init-1',
           sender: 'ann',
           text: initialMessageText,
-          options: initialOptions,
+          options: [],
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ],
@@ -97,28 +98,92 @@ export function useChatbotEngine() {
     navigateToFlow(option.nextFlowId, option.payload, option.label);
   };
 
-  const handleInputSubmit = (inputText: string) => {
-    if (!inputText.trim()) return;
+  const buildOptionChipsForFlows = (flowIds: FlowNodeId[]): OptionChip[] => {
+    if (!flowIds || flowIds.length === 0) return [];
 
-    const currentConfig = FLOW_CONFIG[state.currentFlowId];
-    let nextId: FlowNodeId = 'main_menu';
-    let contextUpdates = {};
+    const mainMenuOptions = typeof FLOW_CONFIG.main_menu.options === 'function'
+      ? FLOW_CONFIG.main_menu.options({})
+      : (FLOW_CONFIG.main_menu.options || []);
 
-    if (currentConfig && currentConfig.processInput) {
-      const res = currentConfig.processInput(inputText, state.context);
-      nextId = res.nextFlowId;
-      if (res.contextUpdates) {
-        contextUpdates = res.contextUpdates;
+    if (flowIds.includes('main_menu')) {
+      return mainMenuOptions;
+    }
+
+    const matchedChips: OptionChip[] = [];
+    for (const flowId of flowIds) {
+      const foundInMain = mainMenuOptions.find((opt) => opt.nextFlowId === flowId);
+      if (foundInMain) {
+        matchedChips.push(foundInMain);
       }
     }
 
-    navigateToFlow(nextId, contextUpdates, inputText);
+    return matchedChips;
+  };
+
+  const handleInputSubmit = async (inputText: string) => {
+    const trimmedInput = inputText.trim();
+    if (!trimmedInput) return;
+
+    const currentConfig = FLOW_CONFIG[state.currentFlowId];
+
+    // If current node is explicitly expecting deterministic form input (e.g. Account Number / Pincode)
+    if (currentConfig && currentConfig.requiresInput && currentConfig.processInput) {
+      const res = currentConfig.processInput(trimmedInput, state.context);
+      navigateToFlow(res.nextFlowId, res.contextUpdates, trimmedInput);
+      return;
+    }
+
+    // Handle as GenAI Conversational Assistant Query
+    const userMsgId = `user-${Date.now()}`;
+    const userTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    setState((prev) => ({
+      ...prev,
+      messages: [
+        ...prev.messages,
+        {
+          id: userMsgId,
+          sender: 'user',
+          text: trimmedInput,
+          timestamp: userTimestamp
+        }
+      ],
+      isTyping: true
+    }));
+
+    const chatHistory = state.messages
+      .filter((m) => m.text)
+      .map((m) => ({
+        role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+        content: m.text || ''
+      }));
+
+    const llmRes = await queryANNAssistant(chatHistory, trimmedInput);
+    const optionChips = buildOptionChipsForFlows(llmRes.matchedFlowIds);
+
+    const annMsgId = `ann-genai-${Date.now()}`;
+    const annTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    setState((prev) => ({
+      ...prev,
+      isTyping: false,
+      messages: [
+        ...prev.messages,
+        {
+          id: annMsgId,
+          sender: 'ann',
+          text: llmRes.text,
+          options: optionChips,
+          timestamp: annTimestamp
+        }
+      ]
+    }));
   };
 
   const handleBack = () => {
     if (state.history.length <= 1) return;
     const newHistory = [...state.history];
-    newHistory.pop(); // remove current
+    newHistory.pop();
     const prevFlowId = newHistory[newHistory.length - 1] || 'main_menu';
 
     const targetConfig = FLOW_CONFIG[prevFlowId];
@@ -154,7 +219,7 @@ export function useChatbotEngine() {
           id: `msg-reset-${Date.now()}`,
           sender: 'ann',
           text: initialMessageText,
-          options: initialOptions,
+          options: [],
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ],

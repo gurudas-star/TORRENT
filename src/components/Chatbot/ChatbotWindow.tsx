@@ -42,11 +42,10 @@ export function ChatbotWindow({ isOpen, onClose }: ChatbotWindowProps) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed z-50 transition-all duration-300 ${
-          isExpanded
+        className={`fixed z-50 transition-all duration-300 ${isExpanded
             ? 'inset-2 sm:inset-6 md:inset-10 rounded-3xl'
             : 'bottom-20 right-4 sm:right-6 w-[92vw] sm:w-[420px] h-[580px] max-h-[82vh] rounded-3xl'
-        } bg-white/98 border border-slate-200 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden text-slate-900`}
+          } bg-white/98 border border-slate-200 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden text-slate-900`}
       >
         {/* Header */}
         <div className="bg-slate-950 border-b border-slate-800 px-4 py-3.5 flex items-center justify-between gap-3 shrink-0 text-white shadow-md">
@@ -61,7 +60,7 @@ export function ChatbotWindow({ isOpen, onClose }: ChatbotWindowProps) {
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-white text-sm tracking-tight">ANN Digital Assistant</h3>
                 <span className="text-[9px] px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold uppercase tracking-wider">
-                  24x7 AI HELPLINE
+                  ASSISTANT
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 flex items-center gap-1.5 mt-0.5">

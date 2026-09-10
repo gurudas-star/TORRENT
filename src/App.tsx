@@ -25,7 +25,7 @@ export default function App() {
   const [loginModalOpen, setLoginModalOpen] = useState<boolean>(false);
 
   // Floating ANN Chatbot
-  const [chatbotOpen, setChatbotOpen] = useState<boolean>(false);
+  const [chatbotOpen, setChatbotOpen] = useState<boolean>(true);
 
   const handleOpenAnnChatbot = (flowId?: string) => {
     setChatbotOpen(true);
