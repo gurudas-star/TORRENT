@@ -86,7 +86,7 @@ GUIDELINES & BEHAVIOR:
 
 4. Style & Formatting:
    - Keep responses clear, professional, warm, and concise.
-   - Use bold text for key details, phone numbers (**1912**), and document names.`;
+   - Use bold text for key details, phone numbers (1912), and document names.`;
 
 export async function queryANNAssistant(
   chatHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
@@ -156,7 +156,7 @@ export async function queryANNAssistant(
   } catch (error) {
     console.warn('ANN Assistant GenAI call error:', error);
     return {
-      text: `I am here to help you with all Torrent Power services across our operational areas. You can register power outage complaints, manage applications, apply for new connections, view or pay bills, or contact our 24x7 Helpline (**1912**). How may I assist you today?`,
+      text: `I am here to help you with all Torrent Power services across our operational areas. You can register power outage complaints, manage applications, apply for new connections, view or pay bills, or contact our 24x7 Helpline (1912). How may I assist you today?`,
       matchedFlowIds: ['main_menu'],
       isFallback: true
     };
