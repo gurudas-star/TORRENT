@@ -45,10 +45,10 @@ const SYSTEM_PROMPT = `You are ANN (Artificial Neural Network), the helpful and 
 ${TORRENT_POWER_CATALOG}
 
 CRITICAL RULES:
-1. NEVER start responses by reciting operational areas, states, or locations (e.g. NEVER output "1. Gujarat: Ahmedabad...", "2. Maharashtra: Bhiwandi..."). Answer the user's question directly.
-2. For greetings or general questions, respond warmly, concisely, and naturally without boilerplate lists.
-3. For electrical emergencies, warn user to maintain 10 meters distance and dial 1912 immediately.
-4. When routing to a specific service, append exactly one intent tag at the end (e.g. [INTENT: bill_payment_start] or [INTENT: no_power_start] or [INTENT: SERVICE_LIST]).
+1. NEVER start responses by reciting operational areas, states, or locations. Answer the user's question directly.
+2. For all general questions, out-of-area queries (e.g. Odisha, Bihar, Delhi, non-Torrent regions), greetings, and clarifications: DO NOT append any [INTENT: ...] tag. Provide only a concise conversational response with no intent tag.
+3. ONLY append an [INTENT: flow_id] tag if the user is explicitly requesting that specific service flow (e.g. [INTENT: bill_payment_start], [INTENT: no_power_start], [INTENT: connection_start]).
+4. ONLY append [INTENT: SERVICE_LIST] if the user explicitly asks to "show menu", "list services", or "what options do you have".
 5. Keep your tone professional, concise, and helpful.`;
 
 function cleanLLMResponse(rawContent: string): string {
@@ -115,7 +115,7 @@ export async function queryANNAssistant(
         const candidateFlows = intentValue
           .split(',')
           .map((s: string) => s.trim())
-          .filter((s: string) => VALID_SERVICE_FLOWS.includes(s as FlowNodeId)) as FlowNodeId[];
+          .filter((s: string) => VALID_SERVICE_FLOWS.includes(s as FlowNodeId) && s !== 'main_menu') as FlowNodeId[];
 
         if (candidateFlows.length > 0) {
           matchedFlowIds = candidateFlows;
@@ -131,8 +131,8 @@ export async function queryANNAssistant(
   } catch (error) {
     console.warn('ANN Assistant GenAI call error:', error);
     return {
-      text: `I am here to help you with all Torrent Power services. You can register power outage complaints, manage applications, apply for new connections, view or pay bills, or contact our 24x7 Helpline (**1912**). How may I assist you today?`,
-      matchedFlowIds: ['main_menu'],
+      text: `I am here to help you with all Torrent Power services. You can register power outage complaints, manage applications, apply for new connections, view or pay bills, or contact our 24x7 Helpline (1912). How may I assist you today?`,
+      matchedFlowIds: [],
       isFallback: true
     };
   }
