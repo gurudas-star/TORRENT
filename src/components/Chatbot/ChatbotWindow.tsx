@@ -13,18 +13,55 @@ interface ChatbotWindowProps {
 export function ChatbotWindow({ isOpen, onClose }: ChatbotWindowProps) {
   const { state, handleOptionClick, handleInputSubmit, handleBack, restartConversation, navigateToFlow } = useChatbotEngine();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [manualInput, setManualInput] = useState('');
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (smooth = true) => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
+    }
   };
 
   useEffect(() => {
-    if (isOpen) {
-      scrollToBottom();
-    }
-  }, [isOpen, state.messages]);
+    if (!isOpen) return;
+
+    // Immediate scroll when messages or state updates
+    scrollToBottom(false);
+
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    // Observe size changes (e.g. typewriter expanding text or chips appearing)
+    const resizeObserver = new ResizeObserver(() => {
+      scrollToBottom(true);
+    });
+
+    const mutationObserver = new MutationObserver(() => {
+      scrollToBottom(true);
+    });
+
+    resizeObserver.observe(container);
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+
+    // Also a slight delayed scroll to catch any CSS animations or layout settling
+    const timeout = setTimeout(() => scrollToBottom(true), 80);
+
+    return () => {
+      clearTimeout(timeout);
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [isOpen, state.messages, state.isTyping]);
 
   if (!isOpen) return null;
 
@@ -122,7 +159,10 @@ export function ChatbotWindow({ isOpen, onClose }: ChatbotWindowProps) {
         </div>
 
         {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
+        <div 
+          ref={chatContainerRef} 
+          className="flex-1 overflow-y-auto p-4 space-y-2 bg-white scroll-smooth"
+        >
           {state.messages.map((msg, index) => (
             <ChatMessage
               key={msg.id}
@@ -133,7 +173,7 @@ export function ChatbotWindow({ isOpen, onClose }: ChatbotWindowProps) {
             />
           ))}
           {state.isTyping && <TypingIndicator />}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4 shrink-0" />
         </div>
 
         {/* Bottom Input Field */}
